@@ -26,9 +26,10 @@
         --default                   Just output any instructions we find
                                     (default)
 
-    Example:
+    Examples:
         xobjdump -d program.xe | xs1_decoder.py --xobjdump-sub
-    
+        echo "dd a6" | ./xs1_decoder.py
+
 """
 
 from docopt import docopt
