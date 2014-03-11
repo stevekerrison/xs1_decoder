@@ -6,8 +6,6 @@
     Takes either xobjdump format or just the hex of the instructions in the same
     format as objdump.
 
-    Implements the decoder as used by rlsobou
-
     Copyright (c) 2014, Steve Kerrison, All rights reserved
     This software is freely distributable under a derivative of the
     University of Illinois/NCSA Open Source License posted in
