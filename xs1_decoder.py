@@ -57,6 +57,10 @@ class XS1Decoder(object):
             '{}{}{}'.format(xobjpattern, instrpattern, xobjinstr), re.I)
     # Address matcher
     addrmatcher = re.compile(xobjpattern, re.I)
+
+    # Verification matcher for xobjdump verif
+    verifmatcher = re.compile(r'.*?(\w+\s+\(.*?\))', re.I)
+
     # Decoder dictionary - recursive lambdas until we get an instruction string
     decode_opc = {
         0x00: lambda(x): {
@@ -81,7 +85,7 @@ class XS1Decoder(object):
                     }[x['low']],
             }[x['self'].num_operands(x['low'])](x),
         0x01: lambda(x): {
-            3:  lambda(x): 'LTW_2rus',
+            3:  lambda(x): 'LDW_2rus',
             2:  lambda(x): {
                     0: 'TINITDP_2r',
                     1: 'OUTT_2r',
@@ -246,7 +250,7 @@ class XS1Decoder(object):
         0x10: lambda(x): {
             3:  lambda(x): 'LD16S_3r',
             2:  lambda(x): {
-                    0: 'NOT_2r',
+                    0: 'GETR_rus',
                     1: 'INCT_2r',
                     }[ x['self'].bit(x['low'], 4) ],
             1:  lambda(x): {
@@ -307,7 +311,7 @@ class XS1Decoder(object):
                     }[ x['self'].bit(x['low'], 4) ],
             }[x['self'].num_operands(x['low'])](x),
         0x19: lambda(x): {
-            3:  lambda(x): 'LSU_r3',
+            3:  lambda(x): 'LSU_3r',
             2:  lambda(x): {
                     0: 'CHKCT_2r',
                     1: 'CHKCT_rus',
@@ -656,6 +660,22 @@ class XS1Decoder(object):
             unused, low = struct.unpack('<HH', binstr)
         return self.decode_word(low, high, iwords == 2)
 
+    def verify_decode(self, line, decoded):
+        m = self.verifmatcher.match(line).group(1).split(' ')
+        m[0] = m[0].upper()
+        d = decoded.split('_')
+        if not (
+                ( m[0] == d[0][:len(m[0])] or
+                 ( m[0][0] == 'B' and d[0][0] == 'B' ) or
+                 ( m[0] == 'INIT' and d[0][:5] == 'TINIT') or
+                 ( m[0] == 'SET' and d[0][:4] == 'TSET') or
+                 ( m[0] == 'CRC32' and d[0][:3] == 'CRC' ) ) and
+                ( m[1][1:-1] == d[1] or
+                 ( m[1][1:-1] == 'r2r' and d[1] == '2r' ) or
+                 ( m[1][1:-1] == 'lr2r' and d[1] == 'l2r' ) ) ):
+            print line, decoded
+            raise Exception
+
     def decode_line(self, line, merge=None, replace=False, tup=False):
         """
             Decode a line of hex or objdump output. Return mnemonic, or...
@@ -678,8 +698,10 @@ class XS1Decoder(object):
                 if tup:
                     return { int(self.addrmatcher.match(line).group(2)): decoded }
                 elif merge is not None:
+                    self.verify_decode(line, decoded)
                     return line.rstrip() + merge + decoded
                 elif replace:
+                    self.verify_decode(line, decoded)
                     match = self.nonarchmatcher.match(line)
                     length = len(match.group(5))
                     return line.replace(match.group(5),
