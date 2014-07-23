@@ -681,8 +681,8 @@ class XS1Decoder(object):
                     return line.rstrip() + merge + decoded
                 elif replace:
                     match = self.nonarchmatcher.match(line)
-                    length = len(match.group(4))
-                    return line.replace(match.group(4),
+                    length = len(match.group(5))
+                    return line.replace(match.group(5),
                         decoded.ljust(length)).rstrip()
                 else:
                     return decoded
