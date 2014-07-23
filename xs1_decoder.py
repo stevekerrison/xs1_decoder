@@ -42,10 +42,10 @@ class XS1Decoder(object):
         Decode xobjdump output or one instruction per line space separated hex
         into XMOS XS1b architecture mnemonics
     """
-    # Pattern to match instructions (required_
+    # Pattern to match instructions (required)
     instrpattern = r'(([0-9a-f]{2}\s*){2,4})'
     # Xobjdump pattern prefix (optional)
-    xobjpattern = r'^(\.\w*)?\s*0x[0-9a-f]+:\s*'
+    xobjpattern = r'^(\.\w*)?\s*(0x[0-9a-f]+):\s*'
     # Non-architectural instruction format from xobjdump e.g. "add (2rus)"
     xobjinstr = r':\s*(\w+\s*\(\w+\)\s*)'
     # Pre compiled whitespace remover
@@ -55,6 +55,8 @@ class XS1Decoder(object):
     # Replacer
     nonarchmatcher = re.compile(
             '{}{}{}'.format(xobjpattern, instrpattern, xobjinstr), re.I)
+    # Address matcher
+    addrmatcher = re.compile(xobjpattern, re.I)
     # Decoder dictionary - recursive lambdas until we get an instruction string
     decode_opc = {
         0x00: lambda(x): {
@@ -654,7 +656,7 @@ class XS1Decoder(object):
             unused, low = struct.unpack('<HH', binstr)
         return self.decode_word(low, high, iwords == 2)
 
-    def decode_line(self, line, merge=None, replace=False):
+    def decode_line(self, line, merge=None, replace=False, tup=False):
         """
             Decode a line of hex or objdump output. Return mnemonic, or...
             Merge will produce line + merge + mnemonic
@@ -666,14 +668,16 @@ class XS1Decoder(object):
             prefix = ''
             if merge is not None:
                 prefix = line.rstrip() + merge
-            string = self.whitematcher.sub('', xmatch.group(3))
+            string = self.whitematcher.sub('', xmatch.group(4))
             length = len(string)
             assert length in [4, 8]
             length /= 4
             instr = int(string, 16)
             try:
                 decoded = self.decode_bin(instr, length)
-                if merge is not None:
+                if tup:
+                    return { int(self.addrmatcher.match(line).group(2)): decoded }
+                elif merge is not None:
                     return line.rstrip() + merge + decoded
                 elif replace:
                     match = self.nonarchmatcher.match(line)
