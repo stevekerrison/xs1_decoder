@@ -426,8 +426,9 @@ class XS1Decoder(object):
                     }[x['self'].num_operands(x['low'], x['high'])](x),
                 0x01: lambda(x): {
                     5:  lambda(x): {
-                        True:  lambda(x): 'LSUB_l5r',
-                        }[x['self'].bit(x['high'], 4) != 0](x),
+                        True: lambda(x): 'LSUB_l5r',
+                        False: lambda(x): 'ILLEGAL',
+                        }[x['self'].bit(x['high'], 4) == 0](x),
                     4:  lambda(x): {
                         0x7e:   lambda(x): 'MACCS_l4r',
                         }[x['self'].bit_range(x['high'], 10, 4)](x),
